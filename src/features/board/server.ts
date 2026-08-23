@@ -58,8 +58,12 @@ export async function getProjectBoard(): Promise<BoardCard[]> {
  * ⚠️ 팀 액션은 여기 안 나온다(§상태 정책) — 팀 액션 완료 여부는 하위 개인 액션 집계로
  *    파생되지, 사람이 보드에서 직접 옮기는 대상이 아니다.
  */
-export async function getMyActionBoard(assigneeName: string): Promise<BoardCard[]> {
+export async function getMyActionBoard(assigneeName?: string): Promise<BoardCard[]> {
   if (isMock) {
+    // ⚠️ mock 분기는 이 값 없이는 아무것도 못 고른다 — 빈 문자열("")을 넘기면 전부 필터링돼
+    //    "카드가 0건"으로 조용히 보이는 게 제일 위험하다. 없으면 바로 던져서 호출부
+    //    (`commitBoardChangesLive`)의 기존 catch가 appliedCount: 0으로 잡게 한다.
+    if (!assigneeName) throw new Error("getMyActionBoard: mock 분기는 assigneeName이 필요하다");
     const cards: BoardCard[] = [];
     for (const [teamActionIdText, items] of Object.entries(TEAM_ACTION_PERSONAL_ITEMS_MOCK)) {
       const teamAction = TEAM_ACTION_DETAIL_MOCK[Number(teamActionIdText)];

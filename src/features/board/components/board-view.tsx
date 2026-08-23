@@ -199,7 +199,10 @@ export function BoardView({ boardType, cards, todayIso }: BoardViewProps) {
           return;
         }
         toast.success(`${appliedCount}건 반영했습니다`);
-      } catch {
+      } catch (error) {
+        // 토스트 문구 하나로는 "카드가 서버 목록에 없었다"와 "예외가 났다"를 구분할 수 없다 —
+        // 재현 시 콘솔에서 실제 원인을 보게 남겨둔다.
+        console.error("보드 카드 이동 반영 실패", error);
         setConfirmOpen(false);
         toast.error("옮기지 못했습니다");
       }

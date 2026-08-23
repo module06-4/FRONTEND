@@ -85,8 +85,14 @@ async function commitBoardChangesLive(
   */
   let currentCards: BoardCard[];
   try {
-    currentCards = boardType === "project" ? await getProjectBoard() : await getMyActionBoard("");
-  } catch {
+    // ⚠️ `getMyActionBoard()`를 인자 없이 부른다 — 실연동에서는 `GET /api/actions`가 이미
+    //    토큰의 본인 소유분만 돌려주므로 assigneeName이 필요 없다(mock 분기 전용 파라미터).
+    //    예전엔 빈 문자열("")을 넘겼는데, 그건 이 분기가 실수로 mock 쪽을 타게 되면 "담당자
+    //    이름이 빈 문자열"로 필터링돼 카드가 전부 사라지는 걸 아무 신호 없이 통과시키는
+    //    지뢰였다 — 지금은 값이 없으면 mock 쪽이 바로 던지고, 여기서 잡아 로그를 남긴다.
+    currentCards = boardType === "project" ? await getProjectBoard() : await getMyActionBoard();
+  } catch (error) {
+    console.error("보드 카드 현재 상태 조회 실패", error);
     return { appliedCount: 0 };
   }
 
