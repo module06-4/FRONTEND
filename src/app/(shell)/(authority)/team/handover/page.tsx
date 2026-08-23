@@ -18,14 +18,12 @@ export const metadata: Metadata = {
 /**
  * 팀원(신청자) 인수인계서 목록 — 팀장 중간 승인을 기다리는 신청만 보인다
  * (WORKFLOW.md §7). 이미 중간 승인된 건은 오너의 최종 승인 대기로 넘어가 여기서 할 일이 없다.
- * ⚠️ 세션이 없어(§team-handover/server.ts) 지금은 고정 스코프(김서준·개발팀)로 렌더링한다 —
- *    `/team/(dashboard)`와 같은 전례.
  */
 export default async function TeamHandoverPage() {
   const viewer = await getViewer();
   if (!canAccessTeamScope(viewer)) return <AccessDenied homeHref={roleHome(viewer.role)} />;
 
-  const items = await listTeamHandovers();
+  const items = await listTeamHandovers(viewer.teamName, viewer.id);
 
   return (
     <main className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-8 py-7">

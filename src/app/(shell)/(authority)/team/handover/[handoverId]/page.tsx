@@ -26,7 +26,7 @@ export default async function TeamHandoverDetailPage({ params }: TeamHandoverDet
   const id = Number(handoverId);
   if (!Number.isInteger(id)) notFound();
 
-  const handover = await getTeamHandoverDetail(id);
+  const handover = await getTeamHandoverDetail(id, viewer.teamName);
   if (!handover) notFound();
 
   return (

@@ -21,15 +21,6 @@ import type {
 } from "./types";
 
 /**
- * ⚠️ 세션이 아직 없다(`getViewer()`는 항상 OWNER를 반환) — `/team/(dashboard)`와 같은 이유로
- *    이 스코프는 지금 고정이다(김서준 · 개발팀). 세션이 붙으면 `canApproveMid(viewer, {teamId})`로
- *    게이트하고 이 상수 대신 `viewer.teamName`/`viewer.id`를 쓴다.
- */
-export const FIXED_LEADER_ID = 2;
-export const FIXED_LEADER_NAME = "김서준";
-const FIXED_TEAM_NAME = "개발팀";
-
-/**
  * 타임라인용 "인계 액션" — `member/mock/managed.ts`의 개인 액션 목록은 `startDate`가 없어
  * 기간 바를 못 그린다. 대신 `leader-handover`가 쓴 것과 같은 소스(`TEAM_ACTION_PERSONAL_ITEMS_MOCK`)
  * 에서 이 신청자 명의 항목만 골라 쓴다(완료 건은 재배정 대상이 아니라 뺀다).
@@ -82,12 +73,21 @@ async function fetchTeammates(
     .map((member) => ({ id: member.memberId, name: member.name, roleLabel: member.roleName }));
 }
 
-/** 목록 — 팀장 중간 승인을 기다리는 팀원 신청만(이미 승인된 건은 여기서 할 일이 없다). */
-export async function listTeamHandovers(): Promise<TeamHandoverListItem[]> {
+/**
+ * 목록 — 팀장 중간 승인을 기다리는 팀원 신청만(이미 승인된 건은 여기서 할 일이 없다).
+ * ⚠️ `teamName`·`leaderId`는 호출부(`getViewer()`)에서 받는다 — 예전엔 "김서준·개발팀"으로
+ *    고정해 뒀는데, 목 인물 명단이 바뀌면 조용히 어긋나는 지뢰였다(`getMyActionBoard`와
+ *    같은 종류, #678). 실연동은 `GET /api/handovers`가 토큰의 팀만 돌려주므로 안 쓴다.
+ */
+export async function listTeamHandovers(
+  teamName: string | undefined,
+  leaderId: number,
+): Promise<TeamHandoverListItem[]> {
   if (isMock) {
+    if (!teamName) throw new Error("listTeamHandovers: mock 분기는 teamName이 필요하다");
     const members = await listManagedMembers();
     const teammates = members.filter(
-      (member) => member.teamName === FIXED_TEAM_NAME && member.id !== FIXED_LEADER_ID,
+      (member) => member.teamName === teamName && member.id !== leaderId,
     );
 
     const details = await Promise.all(teammates.map((member) => getManagedMember(member.id)));
@@ -124,21 +124,27 @@ export async function listTeamHandovers(): Promise<TeamHandoverListItem[]> {
   return summaries.map(toTeamHandoverListItem);
 }
 
-/** 상세 — 이미 중간 승인됐거나 신청이 없으면 `null`(화면이 `notFound()`를 부른다). */
+/**
+ * 상세 — 이미 중간 승인됐거나 신청이 없으면 `null`(화면이 `notFound()`를 부른다).
+ * ⚠️ `teamName`은 호출부(`getViewer()`)에서 받는다 — `listTeamHandovers`와 같은 이유로
+ *    고정값 대신 실제 로그인 팀장의 팀을 쓴다.
+ */
 export async function getTeamHandoverDetail(
   handoverId: number,
+  teamName: string | undefined,
 ): Promise<TeamHandoverDetail | null> {
   if (isMock) {
+    if (!teamName) throw new Error("getTeamHandoverDetail: mock 분기는 teamName이 필요하다");
     const memberId = handoverId;
     const detail = await getManagedMember(memberId);
-    if (!detail || detail.member.teamName !== FIXED_TEAM_NAME) return null;
+    if (!detail || detail.member.teamName !== teamName) return null;
 
     const handover = detail.pendingHandover;
     if (!handover || handover.midApproval) return null;
 
     const members = await listManagedMembers();
     const teammates = members
-      .filter((member) => member.teamName === FIXED_TEAM_NAME && member.id !== memberId)
+      .filter((member) => member.teamName === teamName && member.id !== memberId)
       .map((member) => ({ id: member.id, name: member.name, roleLabel: member.roleLabel }));
 
     return {

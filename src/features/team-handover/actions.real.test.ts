@@ -3,7 +3,6 @@ jest.mock("@/mocks/config", () => ({ isMock: false }));
 jest.mock("@/features/auth/session", () => ({ requireAccessToken: jest.fn() }));
 jest.mock("@/features/shell/viewer", () => ({ getViewer: jest.fn() }));
 jest.mock("./server", () => ({
-  FIXED_LEADER_NAME: "김서준",
   getTeamHandoverDetail: jest.fn(),
 }));
 jest.mock("@/lib/api", () => ({

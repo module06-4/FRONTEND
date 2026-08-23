@@ -15,7 +15,7 @@ import { ep } from "@/lib/endpoints";
 import { canApproveMid } from "@/lib/permission";
 import { isMock } from "@/mocks/config";
 
-import { FIXED_LEADER_NAME, getTeamHandoverDetail } from "./server";
+import { getTeamHandoverDetail } from "./server";
 import type { TeamHandoverAssignment, TeamMemberOption } from "./types";
 
 const LIST_PATH = "/team/handover";
@@ -89,14 +89,17 @@ export async function commitHandoverReassignments(
  * ⚠️ **재배정 반영은 `board/actions.ts`와 같은 방식**이다(mock) — `TEAM_ACTION_PERSONAL_ITEMS_MOCK`
  *    항목을 직접 mutate한다(별도 격리 저장소를 새로 두지 않는다).
  * ⚠️ **실서버 분기만 팀 스코프를 검사한다**(2026-08-15) — mock 로스터엔 숫자 팀 id가 없어
- *    (`server.ts`의 `teamId: 0` 참고) mock 분기는 종전처럼 `/team/(dashboard)`와 같은
- *    고정 스코프(김서준 · 개발팀)로 그대로 둔다. **진짜 방어선은 BE다**(§권한: 화면 숨김은
- *    UX일 뿐) — 이건 그 앞에 세우는 1차 가드일 뿐이라 BE 쪽 스코프 검증과 별개로 먼저 넣는다.
+ *    (`server.ts`의 `teamId: 0` 참고) `canApproveMid`의 teamId 대조를 mock에서 그대로
+ *    쓸 수 없다. 대신 `getViewer().teamName`으로 mock 데이터를 좁힌다(#678과 같은 이유로
+ *    "김서준·개발팀" 고정값은 제거했다) — **진짜 방어선은 BE다**(§권한: 화면 숨김은 UX일
+ *    뿐) — 이건 그 앞에 세우는 1차 가드일 뿐이라 BE 쪽 스코프 검증과 별개로 먼저 넣는다.
  */
 export async function completeTeamHandoverAction(
   handoverId: number,
   assignments: TeamHandoverAssignment[],
 ): Promise<{ isSuccess: boolean; message?: string }> {
+  const viewer = await getViewer();
+
   /*
     ⚠️ `getTeamHandoverDetail`은 404·403만 `null`로 접는다 — 그 외 실패(통신 장애 등)는
        그대로 다시 던진다. 여기서도 잡아야 페이지가 안 죽는다(2026-08-15, 같은 사고 —
@@ -104,7 +107,7 @@ export async function completeTeamHandoverAction(
   */
   let handover: Awaited<ReturnType<typeof getTeamHandoverDetail>>;
   try {
-    handover = await getTeamHandoverDetail(handoverId);
+    handover = await getTeamHandoverDetail(handoverId, viewer.teamName);
   } catch {
     return {
       isSuccess: false,
@@ -114,7 +117,6 @@ export async function completeTeamHandoverAction(
   if (!handover) return { isSuccess: false, message: "이미 처리됐거나 없는 인수인계서입니다" };
 
   if (!isMock) {
-    const viewer = await getViewer();
     if (!canApproveMid(viewer, { teamId: handover.teamId })) {
       return { isSuccess: false, message: "이 인수인계서를 승인할 권한이 없습니다" };
     }
@@ -148,7 +150,7 @@ export async function completeTeamHandoverAction(
     for (const assignment of assignments) {
       reassignHandoverItem(assignment, teammateById);
     }
-    completeMockHandoverMidApproval(handoverId, FIXED_LEADER_NAME, todayIso());
+    completeMockHandoverMidApproval(handoverId, viewer.name, todayIso());
   } else {
     try {
       await commitHandoverReassignments(handoverId, handover.memberId, assignments);
@@ -181,9 +183,11 @@ export async function rejectTeamHandoverAction(
 ): Promise<{ isSuccess: boolean; message?: string }> {
   if (!reason.trim()) return { isSuccess: false, message: "반려 사유를 입력해 주세요" };
 
+  const viewer = await getViewer();
+
   let handover: Awaited<ReturnType<typeof getTeamHandoverDetail>>;
   try {
-    handover = await getTeamHandoverDetail(handoverId);
+    handover = await getTeamHandoverDetail(handoverId, viewer.teamName);
   } catch {
     return {
       isSuccess: false,
@@ -193,7 +197,6 @@ export async function rejectTeamHandoverAction(
   if (!handover) return { isSuccess: false, message: "이미 처리됐거나 없는 인수인계서입니다" };
 
   if (!isMock) {
-    const viewer = await getViewer();
     if (!canApproveMid(viewer, { teamId: handover.teamId })) {
       return { isSuccess: false, message: "이 인수인계서를 반려할 권한이 없습니다" };
     }
