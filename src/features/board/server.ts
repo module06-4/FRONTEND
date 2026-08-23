@@ -111,15 +111,16 @@ export async function getMyActionBoard(assigneeName?: string): Promise<BoardCard
 
 /**
  * 권한에 따라 오너=프로젝트 보드, 팀장·사원=본인 개인 액션 보드를 고른다.
- * ⚠️ `assigneeName`은 로그인한 그 사람 이름이어야 한다 — 로그인 전인 지금은 대시보드 목에서도
- *    쓰는 대표 인물(김서준·이하윤)로 대신한다. 세션이 붙으면 `viewer.name`으로 바꾼다.
+ * ⚠️ `assigneeName`은 호출부(`getViewer()`가 이미 가진 `viewer.name`)에서 받는다 — 여기서
+ *    역할만 보고 이름을 다시 추측하면(예전엔 `role === LEADER ? "김서준" : "이하윤"`),
+ *    목 인물 명단이 하나라도 바뀌었을 때 조용히 어긋난다(`getMyActionBoard`와 같은 지뢰).
  */
 export async function loadBoardForRole(
   role: Authority,
+  assigneeName: string,
 ): Promise<{ boardType: BoardType; cards: BoardCard[] }> {
   if (role === AUTHORITY.OWNER) {
     return { boardType: "project", cards: await getProjectBoard() };
   }
-  const assigneeName = role === AUTHORITY.LEADER ? "김서준" : "이하윤";
   return { boardType: "my-action", cards: await getMyActionBoard(assigneeName) };
 }

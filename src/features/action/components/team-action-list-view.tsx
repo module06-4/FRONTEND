@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback } from "react";
+
 import { InfiniteListFooter } from "@/components/common/infinite-list-footer";
 import { isDelayed } from "@/constants/domain";
 import type { TimelineActionInput } from "@/features/member/action-timeline";
@@ -59,6 +61,8 @@ interface TeamActionListViewProps {
   initialPage: number;
   initialTotalPages: number;
   initialTotalCount: number;
+  /** ⚠️ mock 분기 전용 — 실연동은 JWT teamId로 이미 자동 스코프한다(server.ts). */
+  teamName: string | undefined;
 }
 
 export function TeamActionListView({
@@ -66,7 +70,13 @@ export function TeamActionListView({
   initialPage,
   initialTotalPages,
   initialTotalCount,
+  teamName,
 }: TeamActionListViewProps) {
+  const fetchPage = useCallback(
+    (page: number) => fetchTeamActionsPageAction(teamName, page),
+    [teamName],
+  );
+
   const { items, totalCount, hasMore, isLoadingMore, error, loadMore, sentinelRef } =
     useInfiniteScrollList({
       initialItems,
@@ -74,7 +84,7 @@ export function TeamActionListView({
       initialTotalPages,
       initialTotalCount,
       getId,
-      fetchPage: fetchTeamActionsPageAction,
+      fetchPage,
     });
 
   const groups = groupTeamActionsByProject(items);

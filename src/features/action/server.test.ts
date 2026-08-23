@@ -8,6 +8,7 @@ import { groupMyActionsByProject, groupTeamActionsByProject, toTeamActionListIte
 import { getMyActionsPage, getTeamActionsPage } from "./server";
 
 const ASSIGNEE = "이하윤";
+const TEAM = "개발팀";
 
 describe("내 액션 목록 한 페이지 (getMyActionsPage)", () => {
   it("마감 임박순(dueDate asc)으로 정렬해 돌려준다 — 서버 정렬과 같은 순서", async () => {
@@ -34,7 +35,7 @@ describe("내 액션 목록 한 페이지 (getMyActionsPage)", () => {
 
 describe("팀 액션 목록 한 페이지 (getTeamActionsPage)", () => {
   it("평평한 목록으로 온다 — 줄마다 프로젝트 정보를 갖고 있어 화면이 다시 묶을 수 있다", async () => {
-    const result = await getTeamActionsPage(0);
+    const result = await getTeamActionsPage(TEAM, 0);
     expect(result.items.length).toBeGreaterThan(0);
     for (const item of result.items) {
       expect(item.projectId).toEqual(expect.any(Number));
@@ -44,8 +45,8 @@ describe("팀 액션 목록 한 페이지 (getTeamActionsPage)", () => {
   });
 
   it("마감 임박순으로 자르고 totalCount는 페이지가 바뀌어도 같다", async () => {
-    const first = await getTeamActionsPage(0, 2);
-    const second = await getTeamActionsPage(1, 2);
+    const first = await getTeamActionsPage(TEAM, 0, 2);
+    const second = await getTeamActionsPage(TEAM, 1, 2);
     expect(first.totalCount).toBe(second.totalCount);
     expect(first.totalPages).toBe(Math.ceil(first.totalCount / 2));
     const dueDates = first.items.map((item) => item.dueDate);
@@ -53,8 +54,8 @@ describe("팀 액션 목록 한 페이지 (getTeamActionsPage)", () => {
   });
 
   it("다음 페이지는 앞 페이지와 id가 겹치지 않는다 — 이어 붙일 때 중복이 없다", async () => {
-    const first = await getTeamActionsPage(0, 2);
-    const second = await getTeamActionsPage(1, 2);
+    const first = await getTeamActionsPage(TEAM, 0, 2);
+    const second = await getTeamActionsPage(TEAM, 1, 2);
     expect(first.items).toHaveLength(2);
     expect(second.page).toBe(1);
     expect(second.items.length).toBeGreaterThan(0);

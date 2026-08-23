@@ -19,9 +19,6 @@ import {
 import { PERSONAL_ACTION_DETAIL_MOCK } from "./mock/action-detail";
 import type { MyActionListItem, PersonalActionDetail, TeamActionListItem } from "./types";
 
-/** 로그인 팀장의 팀 — 세션 붙기 전까지 mock 분기에서만 쓰는 고정값(board/server.ts와 같은 인물). */
-const MOCK_LEADER_TEAM = "개발팀";
-
 /** 개인 액션 상세(`/app/actions/:actionId`). 못 찾으면 `null`(호출부가 404). */
 export async function getPersonalActionDetail(
   actionId: string,
@@ -66,11 +63,14 @@ export const ACTION_PAGE_SIZE = 20;
  *    돌려준다(board/server.ts와 같은 이유). 파라미터는 mock 분기 전용으로 시그니처만 유지한다.
  */
 export async function getMyActionsPage(
-  assigneeName: string,
+  assigneeName: string | undefined,
   page: number,
   pageSize: number = ACTION_PAGE_SIZE,
 ): Promise<PaginatedResult<MyActionListItem>> {
   if (isMock) {
+    // ⚠️ 값 없이 mock 분기를 타면 전부 필터링돼 "액션이 0건"으로 조용히 보이는 게 제일
+    //    위험하다(`getMyActionBoard`와 같은 이유) — 바로 던져서 호출부가 알아채게 한다.
+    if (!assigneeName) throw new Error("getMyActionsPage: mock 분기는 assigneeName이 필요하다");
     const list: MyActionListItem[] = [];
     for (const items of Object.values(TEAM_ACTION_PERSONAL_ITEMS_MOCK)) {
       for (const item of items) {
@@ -145,13 +145,18 @@ export async function getMyActionsPage(
  *    (`sort=dueDate&order=asc`, [확인] BE `action/presentation/api/TeamActionController.java`
  *    list — sort=dueDate|createdAt, order, page 0-base, size 기본 20).
  * ⚠️ 실연동은 `GET /api/team/actions`가 JWT teamId로 이미 자동 스코프하므로 팀명을 안 넘긴다.
- *    mock은 세션이 없어 팀명 필터가 필요하다(board/server.ts와 같은 이유).
+ *    mock은 세션이 없어 팀명 필터가 필요하다(board/server.ts와 같은 이유) — 호출부
+ *    (`/team/action` 페이지)가 `getViewer().teamName`을 실어 보낸다.
  */
 export async function getTeamActionsPage(
+  teamName: string | undefined,
   page: number,
   pageSize: number = ACTION_PAGE_SIZE,
 ): Promise<PaginatedResult<TeamActionListItem>> {
   if (isMock) {
+    // ⚠️ 값 없이 mock 분기를 타면 전부 필터링돼 "팀 액션이 0건"으로 조용히 보이는 게 제일
+    //    위험하다(`getMyActionBoard`와 같은 이유) — 바로 던져서 호출부가 알아채게 한다.
+    if (!teamName) throw new Error("getTeamActionsPage: mock 분기는 teamName이 필요하다");
     const list: TeamActionListItem[] = [];
     /*
       ⚠️ 목은 팀 액션을 **태그로** 찾는데 태그는 프로젝트끼리 겹칠 수 있다(GOODS가 둘,
@@ -163,7 +168,7 @@ export async function getTeamActionsPage(
     const seen = new Set<number>();
     for (const project of TOP_LEVEL_PROJECTS) {
       for (const action of PROJECT_TEAM_ACTIONS_MOCK[project.tag] ?? []) {
-        if (action.team !== MOCK_LEADER_TEAM) continue;
+        if (action.team !== teamName) continue;
         if (seen.has(action.id)) continue;
         seen.add(action.id);
         /*

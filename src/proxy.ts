@@ -9,7 +9,7 @@ import {
   REFRESH_TOKEN_MAX_AGE,
   tokenCookieOptions,
 } from "@/features/auth/cookie";
-import { ep } from "@/lib/endpoints";
+import { BACKEND_BASE_URL, ep } from "@/lib/endpoints";
 import { PATHNAME_HEADER } from "@/lib/pathname-header";
 
 /**
@@ -43,7 +43,6 @@ const PROTECTED_PREFIXES = [
 ];
 
 const isMock = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
-const BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:8080";
 
 function withPathname(request: NextRequest) {
   /*
@@ -125,7 +124,7 @@ async function reissue(
   keepSignedIn: boolean,
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
   try {
-    const response = await fetch(`${BASE_URL}${ep.refresh()}`, {
+    const response = await fetch(`${BACKEND_BASE_URL}${ep.refresh()}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken, keepSignedIn }),

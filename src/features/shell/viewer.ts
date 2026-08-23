@@ -22,6 +22,13 @@ import { isMock } from "@/mocks/config";
 */
 export interface Viewer extends Actor {
   name: string;
+  /**
+   * 세션의 기업 id — 결제(`requestCardAuth`의 customerKey)처럼 BE가 principal의
+   * companyId와 대조하는 값에 쓴다.
+   * ⚠️ 목에서는 `MOCK_COMPANY_ID` 하나로 고정한다 — 화면마다 따로 자리표시자를 박아 두면
+   *    (billing 페이지가 그랬다) 실연동 전환 때 그 자리를 다 찾아야 한다(§Mock → Live 격리막).
+   */
+  companyId: number;
 }
 
 /**
@@ -40,6 +47,9 @@ export interface Viewer extends Actor {
   ⚠️ 비워 두면 **팀 범위로 도는 화면이 목에서 통째로 빈다**(2026-08-13 채움) — 참석자 피커의
      "자기 팀만"과 예약 폼의 "상위 팀 액션" 목록이 둘 다 `teamName`으로 걸러서다.
 */
+/** 목 전용 — 이 도메인이 아직 세션을 안 읽는 동안 회사 하나로 고정한다. */
+const MOCK_COMPANY_ID = 1;
+
 const MOCK_PEOPLE: Record<Authority, { id: number; name: string; teamName?: string }> = {
   [AUTHORITY.OWNER]: { id: 1, name: "대표 계정" },
   [AUTHORITY.LEADER]: { id: 2, name: "김서준", teamName: "개발팀" },
@@ -84,7 +94,14 @@ export async function getViewer(): Promise<Viewer> {
     const role = previewRoleFrom(search) ?? mockRoleFor(pathname);
     const person = MOCK_PEOPLE[role];
 
-    return { id: person.id, name: person.name, role, isAdmin: false, teamName: person.teamName };
+    return {
+      id: person.id,
+      name: person.name,
+      role,
+      isAdmin: false,
+      teamName: person.teamName,
+      companyId: MOCK_COMPANY_ID,
+    };
   }
 
   /*
@@ -105,5 +122,6 @@ export async function getViewer(): Promise<Viewer> {
     isAdmin: me.isAdmin,
     teamId: me.teamId ?? undefined,
     teamName: me.teamName ?? undefined,
+    companyId: me.companyId,
   };
 }

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { BACKEND_BASE_URL } from "./endpoints";
 import { isErrorTag } from "./error-tag";
 import { pushLokiLog } from "./loki";
 
@@ -17,9 +18,6 @@ import { pushLokiLog } from "./loki";
  * ⚠️ `message`는 **화면에 그대로 띄울 한국어 문장**이다. 코드로 문구를 조립하지 않는다.
  * ⚠️ 실패의 `errorCode`(`HO-016` 등)는 **분기용**이다 — 사람에게 보여 주는 건 `message`다.
  */
-
-/** BE 주소. 서버에서만 읽으므로 `NEXT_PUBLIC_`을 붙이지 않는다 — 브라우저에 나갈 값이 아니다. */
-const BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:8080";
 
 interface ApiEnvelope<T> {
   httpStatus: number;
@@ -119,7 +117,7 @@ export async function serverApi<T>(path: string, init: ApiInit = {}): Promise<T>
   */
   const timeout = AbortSignal.timeout(timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(`${BACKEND_BASE_URL}${path}`, {
     cache: "no-store",
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     ...rest,

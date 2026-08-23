@@ -337,9 +337,12 @@ export async function getMeetingSummaryAction(meetingId: string): Promise<Meetin
  *    화면은 SCHEDULED일 때만 [회의 취소]를 보여주지만, 서버에서 다시 확인한다.
  */
 export async function cancelMeetingAction(meetingId: string): Promise<CancelMeetingResult> {
-  const actor = getMockActor();
-
   if (isMock) {
+    // ⚠️ `getMockActor()`는 항상 고정 OWNER다 — 실서버 분기는 이 값을 안 읽으므로 밖에
+    //    두면 "쓰는 것처럼 보이지만 실제로는 실서버에서 안 쓰이는" 상태로 방치되고,
+    //    나중에 실서버 분기가 actor 기반 검사를 추가하면 조용히 가짜 OWNER를 받는다
+    //    (`board/actions.ts`의 `getMyActionBoard("")`와 같은 지뢰).
+    const actor = getMockActor();
     const meeting = findMockMeeting(meetingId);
     if (!meeting) return { error: "회의를 찾을 수 없습니다" };
     if (!canManageMeeting(actor, { hostId: meeting.hostId })) {
@@ -412,9 +415,10 @@ export async function updateMeetingAction(
   const checked = checkMeetingTitle(String(formData.get("title") ?? ""));
   if (!checked.ok) return { error: checked.error, saved: null };
 
-  const actor = getMockActor();
-
   if (isMock) {
+    // ⚠️ `getMockActor()`는 항상 고정 OWNER다 — cancelMeetingAction과 같은 이유로
+    //    실서버 분기가 안 읽는 이 값을 밖에서 만들지 않는다.
+    const actor = getMockActor();
     const meeting = findMockMeeting(meetingId);
     if (!meeting) return { error: "회의를 찾을 수 없습니다", saved: null };
     if (!canManageMeeting(actor, { hostId: meeting.hostId })) {
@@ -524,10 +528,12 @@ export async function updateMeetingScheduleAction(
   const errors = validateMeetingEditDraft(draft);
   if (Object.keys(errors).length > 0) return { errors, saved: null };
 
-  const actor = getMockActor();
   const title = draft.title.trim();
 
   if (isMock) {
+    // ⚠️ `getMockActor()`는 항상 고정 OWNER다 — cancelMeetingAction과 같은 이유로
+    //    실서버 분기가 안 읽는 이 값을 밖에서 만들지 않는다.
+    const actor = getMockActor();
     const meeting = findMockMeeting(meetingId);
     if (!meeting) return { errors: { title: "회의를 찾을 수 없습니다" }, saved: null };
     if (!canManageMeeting(actor, { hostId: meeting.hostId })) {

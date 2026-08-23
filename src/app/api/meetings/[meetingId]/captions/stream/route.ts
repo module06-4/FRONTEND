@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { ensureAccessToken } from "@/features/auth/session";
-import { ep } from "@/lib/endpoints";
+import { BACKEND_BASE_URL, ep } from "@/lib/endpoints";
 
 /**
  * 자막 SSE 중계(CAP-13) — **BFF**.
@@ -20,8 +20,6 @@ import { ep } from "@/lib/endpoints";
 export const runtime = "nodejs";
 /** 스트림이라 캐시가 있으면 안 된다 — 한 사람의 자막이 다른 사람에게 간다 */
 export const dynamic = "force-dynamic";
-
-const BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:8080";
 
 export async function GET(
   request: NextRequest,
@@ -49,7 +47,7 @@ export async function GET(
 
   let upstream: Response;
   try {
-    upstream = await fetch(`${BASE_URL}${ep.captionsStream(meetingIdNumber)}`, {
+    upstream = await fetch(`${BACKEND_BASE_URL}${ep.captionsStream(meetingIdNumber)}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "text/event-stream",

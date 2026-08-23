@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { ensureAccessToken } from "@/features/auth/session";
-import { ep } from "@/lib/endpoints";
+import { BACKEND_BASE_URL, ep } from "@/lib/endpoints";
 
 /**
  * 개인 알림 SSE 중계 — **BFF**(CLAUDE.md §렌더링·데이터: "BFF가 스트림을 중계하고 토큰을 주입한다").
@@ -26,8 +26,6 @@ export const runtime = "nodejs";
 /** 스트림이라 캐시가 있으면 안 된다 — 한 사람의 알림이 다른 사람에게 간다 */
 export const dynamic = "force-dynamic";
 
-const BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:8080";
-
 export async function GET(request: NextRequest) {
   /*
     ⚠️ **`getAccessToken()`이 아니라 `ensureAccessToken()`이다.** 이 경로는 `proxy.ts`
@@ -49,7 +47,7 @@ export async function GET(request: NextRequest) {
 
   let upstream: Response;
   try {
-    upstream = await fetch(`${BASE_URL}${ep.notificationStream()}`, {
+    upstream = await fetch(`${BACKEND_BASE_URL}${ep.notificationStream()}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "text/event-stream",

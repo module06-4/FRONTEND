@@ -8,9 +8,6 @@ import { getViewer } from "@/features/shell/viewer";
 import { canAccessManageScope } from "@/lib/permission";
 import { canManageBilling } from "@/lib/permission";
 
-/** 이 도메인은 항상 더미라 진짜 세션 값이 없다 — 카드 등록 흐름만 확인하는 자리표시자. */
-const MOCK_COMPANY_ID = 1;
-
 export const metadata: Metadata = {
   title: "구독",
 };
@@ -42,13 +39,12 @@ export default async function OwnerBillingPage() {
 
   const canManage = canManageBilling(viewer);
 
-  /*
-    ⚠️ `requestCardAuth`의 customerKey로 실어 보낼 기업 id — 이 도메인이 더미라 진짜
-       세션 값 대신 자리표시자를 쓴다(위 상수 참고).
-  */
-  const companyId = MOCK_COMPANY_ID;
-
   return (
-    <BillingView overview={overview} config={config} canManage={canManage} companyId={companyId} />
+    <BillingView
+      overview={overview}
+      config={config}
+      canManage={canManage}
+      companyId={viewer.companyId}
+    />
   );
 }

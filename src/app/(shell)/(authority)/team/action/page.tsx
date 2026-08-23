@@ -25,7 +25,7 @@ export default async function TeamActionPage() {
   const viewer = await getViewer();
   if (!canAccessTeamScope(viewer)) return <AccessDenied homeHref={roleHome(viewer.role)} />;
 
-  const firstPage = await getTeamActionsPage(0);
+  const firstPage = await getTeamActionsPage(viewer.teamName, 0);
 
   return (
     <main className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-8 py-7">
@@ -34,6 +34,7 @@ export default async function TeamActionPage() {
         initialPage={firstPage.page}
         initialTotalPages={firstPage.totalPages}
         initialTotalCount={firstPage.totalCount}
+        teamName={viewer.teamName}
       />
     </main>
   );

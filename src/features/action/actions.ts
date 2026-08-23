@@ -25,9 +25,11 @@ export async function fetchMyActionsPageAction(
   return getMyActionsPage(assigneeName, safePage);
 }
 
+/** ⚠️ `teamName`은 mock 분기 전용이다 — 실연동은 JWT teamId로 이미 자동 스코프한다(server.ts). */
 export async function fetchTeamActionsPageAction(
+  teamName: string | undefined,
   page: number,
 ): Promise<PaginatedResult<TeamActionListItem>> {
   const safePage = Number.isFinite(page) ? Math.max(0, Math.trunc(page)) : 0;
-  return getTeamActionsPage(safePage);
+  return getTeamActionsPage(teamName, safePage);
 }

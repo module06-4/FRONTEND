@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies, headers } from "next/headers";
 
-import { ep } from "@/lib/endpoints";
+import { BACKEND_BASE_URL, ep } from "@/lib/endpoints";
 
 import {
   ACCESS_TOKEN_COOKIE,
@@ -13,8 +13,6 @@ import {
   REFRESH_TOKEN_MAX_AGE,
   tokenCookieOptions,
 } from "./cookie";
-
-const BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:8080";
 
 /**
  * 세션 — **httpOnly 쿠키 한 곳**(CLAUDE.md §렌더링·데이터: `localStorage` 토큰 금지).
@@ -102,7 +100,7 @@ async function reissueTokens(
   keepSignedIn: boolean,
 ): Promise<SessionTokens | null> {
   try {
-    const response = await fetch(`${BASE_URL}${ep.refresh()}`, {
+    const response = await fetch(`${BACKEND_BASE_URL}${ep.refresh()}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken, keepSignedIn }),

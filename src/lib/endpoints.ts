@@ -18,6 +18,14 @@
  *      진행 중이다. 지우기 전에 **그 도메인 담당자·이슈를 먼저 본다.**
  */
 /**
+ * BE 주소 — 서버 쪽 fetch 호출부(`lib/api.ts`·`proxy.ts`·`auth/session.ts`·알림/자막 SSE
+ * BFF 라우트)가 전부 여기서 가져온다. 예전엔 각자 `process.env.BACKEND_API_URL ?? "http://
+ * localhost:8080"`을 따로 적어 뒀는데, 그러면 폴백을 고칠 때 한 곳을 빠뜨려도 타입 에러가
+ * 안 난다 — 이 파일은 `server-only`가 아니라 `proxy.ts`(Edge)에서도 그대로 쓸 수 있다.
+ */
+export const BACKEND_BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:8080";
+
+/**
  * 목록 3종(`GET /api/projects`·`/api/actions`·`/api/team/actions`)이 공유하는 쿼리 파라미터.
  * ⚠️ **`sort`는 여기 없다.** 컨트롤러마다 화이트리스트가 달라서(프로젝트만 `name`을 받는다)
  *    한 타입에 몰아 두면 액션 목록에 `sort=name`을 보내도 타입이 안 막는다 — BE는 모르는

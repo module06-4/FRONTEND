@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function BoardPage() {
   const viewer = await getViewer();
-  const { boardType, cards } = await loadBoardForRole(viewer.role);
+  const { boardType, cards } = await loadBoardForRole(viewer.role, viewer.name);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-8 py-7">

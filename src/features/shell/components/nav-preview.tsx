@@ -27,6 +27,7 @@ const person = (role: Authority, name: string, isAdmin = false): Viewer => ({
   name,
   role,
   isAdmin,
+  companyId: 1,
 });
 
 /**
