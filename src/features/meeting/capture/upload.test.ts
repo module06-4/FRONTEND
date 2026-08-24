@@ -76,48 +76,74 @@ it("presigned URL 경로에서 S3 키를 정확히 뽑아 complete에 실어 보
   });
 });
 
+/**
+ * 재시도 사이 `sleep(RETRY_DELAY_MS = 500ms)`가 **실 `setTimeout`**이라, 병렬 jest 워커
+ * CPU 경합이 걸리면 3초 안팎이면 끝날 일이 15초를 넘겨 타임아웃이 났다. 재시도 로직만
+ *검증하는 아래 두 테스트는 **fake timers**로 시간을 앞으로 감아 실 대기 없이 돌린다 —
+ * 로직은 그대로 두고 테스트만 실 시간 의존성을 뗀다. 아래 다른 테스트("순서대로 하나씩")는
+ * fetch 목이 자체 `setTimeout(5)`으로 동시성을 재기 때문에 fake timers를 전역으로 걸면 안
+ * 된다 — 그래서 두 테스트 안에서만 켜고 finally에서 원복한다.
+ */
+async function drainRetries(flushPromise: Promise<void>): Promise<void> {
+  // 각 조각당 최대 (MAX_UPLOAD_ATTEMPTS - 1)회 = 2회 sleep, 최대 4조각을 넉넉히 덮는다.
+  for (let i = 0; i < 12; i += 1) {
+    await jest.advanceTimersByTimeAsync(500);
+  }
+  await flushPromise;
+}
+
 it("PUT이 실패해도 같은 조각을 재시도해서 결국 올린다", async () => {
-  presignMock.mockResolvedValue(batch(0, [1]));
-  const onFailure = jest.fn();
-  (global.fetch as jest.Mock)
-    .mockResolvedValueOnce({ ok: false, status: 500 })
-    .mockResolvedValueOnce({ ok: false, status: 500 })
-    .mockResolvedValueOnce({ ok: true });
+  jest.useFakeTimers();
+  try {
+    presignMock.mockResolvedValue(batch(0, [1]));
+    const onFailure = jest.fn();
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValueOnce({ ok: true });
 
-  const uploader = createSliceUploader(9, { onFailure });
-  uploader.enqueue(new Blob(["a"]));
-  await uploader.flush();
+    const uploader = createSliceUploader(9, { onFailure });
+    uploader.enqueue(new Blob(["a"]));
+    await drainRetries(uploader.flush());
 
-  expect(global.fetch).toHaveBeenCalledTimes(3); // 같은 presignedUrl로 세 번째 만에 성공
-  expect(completeMock).toHaveBeenCalledTimes(1);
-  expect(onFailure).not.toHaveBeenCalled();
-}, 10_000);
+    expect(global.fetch).toHaveBeenCalledTimes(3); // 같은 presignedUrl로 세 번째 만에 성공
+    expect(completeMock).toHaveBeenCalledTimes(1);
+    expect(onFailure).not.toHaveBeenCalled();
+  } finally {
+    jest.useRealTimers();
+  }
+});
 
 it("재시도까지 다 실패한 조각이 연속 3개면 알리고, 그다음 성공하면 실패 횟수가 되돌아간다", async () => {
-  presignMock.mockResolvedValue(batch(0, [1, 2, 3, 4]));
-  const onFailure = jest.fn();
-  /*
-    조각 1·2·3은 매 시도 실패(각 3번씩 재시도 후 포기 = 9번), 조각 4는 그 뒤 첫 시도부터
-    성공한다(10번째 호출) — 호출 순번으로 세는 게 개별 mockResolvedValueOnce를 9개
-    늘어놓는 것보다 개수를 세기 쉽다.
-  */
-  let callCount = 0;
-  (global.fetch as jest.Mock).mockImplementation(async () => {
-    callCount += 1;
-    return { ok: callCount > 9, status: 500 };
-  });
+  jest.useFakeTimers();
+  try {
+    presignMock.mockResolvedValue(batch(0, [1, 2, 3, 4]));
+    const onFailure = jest.fn();
+    /*
+      조각 1·2·3은 매 시도 실패(각 3번씩 재시도 후 포기 = 9번), 조각 4는 그 뒤 첫 시도부터
+      성공한다(10번째 호출) — 호출 순번으로 세는 게 개별 mockResolvedValueOnce를 9개
+      늘어놓는 것보다 개수를 세기 쉽다.
+    */
+    let callCount = 0;
+    (global.fetch as jest.Mock).mockImplementation(async () => {
+      callCount += 1;
+      return { ok: callCount > 9, status: 500 };
+    });
 
-  const uploader = createSliceUploader(9, { onFailure });
-  uploader.enqueue(new Blob(["a"]));
-  uploader.enqueue(new Blob(["b"]));
-  uploader.enqueue(new Blob(["c"]));
-  uploader.enqueue(new Blob(["d"]));
-  await uploader.flush();
+    const uploader = createSliceUploader(9, { onFailure });
+    uploader.enqueue(new Blob(["a"]));
+    uploader.enqueue(new Blob(["b"]));
+    uploader.enqueue(new Blob(["c"]));
+    uploader.enqueue(new Blob(["d"]));
+    await drainRetries(uploader.flush());
 
-  expect(global.fetch).toHaveBeenCalledTimes(10); // (3+3+3)번 재시도 + 마지막 1번
-  expect(onFailure).toHaveBeenCalledTimes(1); // 조각 3개 연속 포기한 시점에 딱 한 번
-  expect(completeMock).toHaveBeenCalledTimes(1); // 조각 4만 성공해 complete까지 감
-}, 15_000);
+    expect(global.fetch).toHaveBeenCalledTimes(10); // (3+3+3)번 재시도 + 마지막 1번
+    expect(onFailure).toHaveBeenCalledTimes(1); // 조각 3개 연속 포기한 시점에 딱 한 번
+    expect(completeMock).toHaveBeenCalledTimes(1); // 조각 4만 성공해 complete까지 감
+  } finally {
+    jest.useRealTimers();
+  }
+});
 
 it("순서대로, 하나씩 올린다 — 동시에 여러 조각을 PUT하지 않는다", async () => {
   presignMock.mockResolvedValue(batch(0, [1, 2, 3]));
