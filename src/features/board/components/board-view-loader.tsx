@@ -26,13 +26,10 @@ import type { BoardCard, BoardType } from "../types";
 const BoardView = dynamic(() => import("./board-view").then((mod) => mod.BoardView), {
   ssr: false,
   loading: () => (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <Skeleton className="h-8 w-32 self-end rounded-lg" />
-      <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
-        <Skeleton className="h-full w-full rounded-2xl" />
-        <Skeleton className="h-full w-full rounded-2xl" />
-        <Skeleton className="h-full w-full rounded-2xl" />
-      </div>
+    <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
+      <Skeleton className="h-full w-full rounded-2xl" />
+      <Skeleton className="h-full w-full rounded-2xl" />
+      <Skeleton className="h-full w-full rounded-2xl" />
     </div>
   ),
 });

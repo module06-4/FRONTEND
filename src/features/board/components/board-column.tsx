@@ -22,8 +22,6 @@ interface BoardColumnProps {
   isInvalidTarget: boolean;
   /** 카드별 키보드 대체 경로(§canMoveCard) — 갈 수 있는 칸이 없으면 null(#609). */
   moveTargetOf: (card: BoardCardModel) => BoardColumnId | null;
-  /** 이 이동이 원본으로 되돌리기인가 — 워딩이 다음-단계 대신 `되돌리기`가 된다. */
-  isRevertOf: (card: BoardCardModel) => boolean;
   onMoveCard: (card: BoardCardModel, to: BoardColumnId) => void;
 }
 
@@ -67,7 +65,6 @@ export function BoardColumn({
   isDelayed,
   isInvalidTarget,
   moveTargetOf,
-  isRevertOf,
   onMoveCard,
 }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -173,7 +170,6 @@ export function BoardColumn({
                 isDelayed={isDelayed(card)}
                 sourceColumn={id}
                 moveTarget={moveTarget}
-                isRevert={isRevertOf(card)}
                 onMove={() => moveTarget && onMoveCard(card, moveTarget)}
               />
             );

@@ -20,9 +20,6 @@ export const BOARD_COLUMN_LABEL: Record<BoardColumnId, string> = {
  * 목표 칸이 아니라 일 자체에 무슨 일이 나는가를 말한다.
  *
  * ⚠️ **"옮기기"보다 낫다**(2026-08-19, "옮기기 말고 좀 이쁜 워딩 없나"라는 지적).
- * ⚠️ **다음-단계 전용이다.** 되돌리기(드래그·클릭으로 원본 자리에서 벗어난 카드를 다시
- *    제자리로)는 아래 `BOARD_REVERT_LABEL`이 대신 말한다 — 같은 버튼 자리라도 뜻이 완전히
- *    다르다(넘긴다 ≠ 취소한다).
  * ⚠️ 값은 4자로 맞춘다 — 카드 오른쪽 세로줄에 날짜(`8월 12일(토)까지`)와 짝지어 서는데,
  *    너비가 카드마다 달라 보이지 않게 한다.
  */
@@ -31,12 +28,6 @@ export const BOARD_NEXT_STEP_LABEL: Record<BoardColumnId, string> = {
   IN_PROGRESS: "완료하기",
   DONE: "이어가기",
 };
-
-/**
- * 드래그·클릭으로 원래 자리를 벗어난 카드를 **원래 자리로 되돌리는** 버튼 워딩.
- * 저장 전 미리보기를 취소하는 것이라 "되돌리기"가 맞다(§보드는 저장 전 미리보기).
- */
-export const BOARD_REVERT_LABEL = "되돌리기";
 
 export const BOARD_COLUMNS: BoardColumnId[] = [
   BOARD_COLUMN.TODO,
@@ -65,14 +56,11 @@ export interface BoardCard {
 /** 오너는 프로젝트, 팀장·사원은 본인 개인 액션 — 보드 종류는 둘뿐이다. */
 export type BoardType = "project" | "my-action";
 
-/** 드래그로 만든 변경 — 저장 전에는 화면(로컬 상태)에만 있다. */
+/** 드래그·[옮기기] 버튼으로 만든 이동 — 서버 액션에 그대로 넘긴다. */
 export interface BoardChange {
   id: number;
   toColumn: BoardColumnId;
 }
-
-/** 옮긴 뒤 저장 안내 — 화면에 직접 적지 않는다(§도메인 상수: 라벨 하드코딩 금지). */
-export const BOARD_SAVE_HINT = "옮긴 뒤 [저장하기]를 눌러야 반영됩니다.";
 
 /** 빈 칸 안내 — 받아 줄 수 있는 칸과 못 받는 칸이 다른 말을 한다. */
 export const BOARD_EMPTY_HINT = "여기로 옮겨 주세요.";
