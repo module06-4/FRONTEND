@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import {
   BOARD_COLUMN_LABEL,
   BOARD_NEXT_STEP_LABEL,
-  BOARD_REVERT_LABEL,
   type BoardCard as BoardCardModel,
   type BoardColumnId,
 } from "../types";
@@ -164,11 +163,6 @@ interface BoardCardMoveProps {
   sourceColumn: BoardColumnId;
   /** 지금 이 카드가 옮겨 갈 수 있는 유일한 칸(§canMoveCard) — 없으면 버튼을 안 그린다. */
   moveTarget: BoardColumnId | null;
-  /**
-   * 이 이동이 원본 자리로 **되돌리기**인가 — 저장 전 미리보기 취소.
-   * `moveTarget`이 원본과 같으면 true이고, 워딩이 다음-단계가 아닌 `BOARD_REVERT_LABEL`이 된다.
-   */
-  isRevert: boolean;
   onMove: () => void;
 }
 
@@ -190,7 +184,6 @@ export function BoardCard({
   isDelayed,
   sourceColumn,
   moveTarget,
-  isRevert,
   onMove,
 }: BoardCardProps & BoardCardMoveProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -249,7 +242,7 @@ export function BoardCard({
                 onMove();
               }}
             >
-              {isRevert ? BOARD_REVERT_LABEL : BOARD_NEXT_STEP_LABEL[sourceColumn]}
+              {BOARD_NEXT_STEP_LABEL[sourceColumn]}
               <ArrowRight />
             </Button>
           )
