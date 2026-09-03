@@ -6,6 +6,7 @@ import {
   handoverDateMin,
   isDueWithinRange,
   parseHandoverType,
+  toHandoverCreateRequestBody,
 } from "./lib";
 
 /**
@@ -120,5 +121,113 @@ describe("HANDOVER_TYPE_TABS — 탭 순서·라벨 계약", () => {
       { type: HANDOVER_TYPE.VACATION, label: "휴직" },
       { type: HANDOVER_TYPE.OFFBOARDING, label: "오프보딩" },
     ]);
+  });
+});
+
+describe("toHandoverCreateRequestBody — FE payload → BE 생성 요청 바디", () => {
+  /*
+    ⚠️ **필드명 변환 회귀 방지 (BE 인수인계 문서 §2·§5)**. 이 경계가 어긋나면 서버가 400만
+       튕겨서 사용자 화면엔 "입력값이 올바르지 않습니다"만 뜨고 실제 원인은 안 보인다 —
+       유형별로 필드 목록·이름·자정 접미사를 하나하나 잡는다.
+  */
+
+  describe("VACATION(휴직)", () => {
+    it("필드명을 BE 계약으로 바꾸고 시작·종료에 자정 `T00:00:00`을 붙인다", () => {
+      const body = toHandoverCreateRequestBody({
+        type: HANDOVER_TYPE.VACATION,
+        startDate: "2026-09-01",
+        endDate: "2026-09-05",
+        actionIds: [11, 22, 33],
+        assignments: { 11: 100, 22: 200 },
+      });
+
+      expect(body).toEqual({
+        handoverType: HANDOVER_TYPE.VACATION,
+        leaveStartAt: "2026-09-01T00:00:00",
+        leaveEndAt: "2026-09-05T00:00:00",
+        selectedActionIds: [11, 22, 33],
+      });
+    });
+
+    /*
+      ⚠️ `assignments`(팀장 본인 휴직의 자가 재배정 맵)는 **생성 바디에 안 실린다** — 별도
+         `PATCH .../items/{actionId}/reassign`으로 나간다(lib.ts L35-37). 여기에 새 나가면
+         BE가 알 수 없는 필드를 받거나 매퍼 순서가 깨진다.
+    */
+    it("`assignments`는 생성 바디에 들어가지 않는다", () => {
+      const body = toHandoverCreateRequestBody({
+        type: HANDOVER_TYPE.VACATION,
+        startDate: "2026-09-01",
+        endDate: "2026-09-05",
+        actionIds: [],
+        assignments: { 11: 100 },
+      });
+
+      expect(body).not.toHaveProperty("assignments");
+    });
+
+    it("오프보딩 전용 필드(`lastWorkingDay`·`note`)는 들어가지 않는다", () => {
+      const body = toHandoverCreateRequestBody({
+        type: HANDOVER_TYPE.VACATION,
+        startDate: "2026-09-01",
+        endDate: "2026-09-05",
+        actionIds: [1],
+        assignments: {},
+      });
+
+      expect(body).not.toHaveProperty("lastWorkingDay");
+      expect(body).not.toHaveProperty("note");
+    });
+  });
+
+  describe("OFFBOARDING(오프보딩)", () => {
+    it("`description → note` · `lastWorkingDay`는 그대로 · 필드명을 BE 계약으로 바꾼다", () => {
+      const body = toHandoverCreateRequestBody({
+        type: HANDOVER_TYPE.OFFBOARDING,
+        description: "9월 10일부로 퇴사합니다.",
+        lastWorkingDay: "2026-09-10",
+        actionIds: [7, 8],
+      });
+
+      expect(body).toEqual({
+        handoverType: HANDOVER_TYPE.OFFBOARDING,
+        lastWorkingDay: "2026-09-10",
+        note: "9월 10일부로 퇴사합니다.",
+        selectedActionIds: [7, 8],
+      });
+    });
+
+    it("휴직 전용 필드(`leaveStartAt`·`leaveEndAt`)는 들어가지 않는다", () => {
+      const body = toHandoverCreateRequestBody({
+        type: HANDOVER_TYPE.OFFBOARDING,
+        description: "인수인계 완료",
+        lastWorkingDay: "2026-09-10",
+        actionIds: [],
+      });
+
+      expect(body).not.toHaveProperty("leaveStartAt");
+      expect(body).not.toHaveProperty("leaveEndAt");
+    });
+  });
+
+  it("두 유형 모두 `actionIds → selectedActionIds`로 이름이 바뀐다 — 공통 계약", () => {
+    const vacation = toHandoverCreateRequestBody({
+      type: HANDOVER_TYPE.VACATION,
+      startDate: "2026-09-01",
+      endDate: "2026-09-05",
+      actionIds: [1, 2],
+      assignments: {},
+    });
+    const offboarding = toHandoverCreateRequestBody({
+      type: HANDOVER_TYPE.OFFBOARDING,
+      description: "인수인계",
+      lastWorkingDay: "2026-09-10",
+      actionIds: [1, 2],
+    });
+
+    expect(vacation).not.toHaveProperty("actionIds");
+    expect(offboarding).not.toHaveProperty("actionIds");
+    expect(vacation.selectedActionIds).toEqual([1, 2]);
+    expect(offboarding.selectedActionIds).toEqual([1, 2]);
   });
 });
