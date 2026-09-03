@@ -1,4 +1,12 @@
-import { handoverDateMin, isDueWithinRange } from "./lib";
+import { HANDOVER_TYPE } from "@/constants/domain";
+
+import {
+  DEFAULT_HANDOVER_TYPE,
+  HANDOVER_TYPE_TABS,
+  handoverDateMin,
+  isDueWithinRange,
+  parseHandoverType,
+} from "./lib";
 
 /**
  * 신청 화면의 날짜 경계 규칙 회귀 방지 — 인접한 `team-handover/mapper.test.ts`와 짝을
@@ -69,5 +77,48 @@ describe("isDueWithinRange — 휴직 기간 안 마감 판정 (양끝 포함, 2
 
   it("종료일이 비어 있으면 판정 불가로 `false`를 준다", () => {
     expect(isDueWithinRange("2026-08-15", "2026-08-10", "")).toBe(false);
+  });
+});
+
+describe("parseHandoverType — 외부 문자열을 신뢰 가능한 HandoverType으로 좁힌다", () => {
+  it("유효한 `VACATION`은 그대로 통과한다", () => {
+    expect(parseHandoverType(HANDOVER_TYPE.VACATION)).toBe(HANDOVER_TYPE.VACATION);
+  });
+
+  it("유효한 `OFFBOARDING`은 그대로 통과한다", () => {
+    expect(parseHandoverType(HANDOVER_TYPE.OFFBOARDING)).toBe(HANDOVER_TYPE.OFFBOARDING);
+  });
+
+  /*
+    ⚠️ **폴백 규칙 회귀 방지** — URL 쿼리·폼 초기값이 비어 있거나 알 수 없는 값일 때
+       `undefined`가 그대로 새 나가면 탭 컴포넌트가 미선택 상태로 열려 사용자가 아무것도
+       못 누른다. 화면상 원인이 안 보이는 사고라 함수 경계에서 반드시 좁힌다.
+  */
+  it("`undefined`는 `DEFAULT_HANDOVER_TYPE`(휴직)로 폴백한다", () => {
+    expect(parseHandoverType(undefined)).toBe(DEFAULT_HANDOVER_TYPE);
+    expect(DEFAULT_HANDOVER_TYPE).toBe(HANDOVER_TYPE.VACATION);
+  });
+
+  it("빈 문자열은 DEFAULT로 폴백한다", () => {
+    expect(parseHandoverType("")).toBe(DEFAULT_HANDOVER_TYPE);
+  });
+
+  it("알 수 없는 값은 DEFAULT로 폴백한다 — 대소문자 · 오타 · 옛 값 전부 동일", () => {
+    expect(parseHandoverType("vacation")).toBe(DEFAULT_HANDOVER_TYPE);
+    expect(parseHandoverType("LEAVE")).toBe(DEFAULT_HANDOVER_TYPE);
+    expect(parseHandoverType("RETIRE")).toBe(DEFAULT_HANDOVER_TYPE);
+  });
+});
+
+describe("HANDOVER_TYPE_TABS — 탭 순서·라벨 계약", () => {
+  /*
+    ⚠️ 탭 순서는 사용자 학습에 남는 UI 규약이다 — 뒤집히면 자주 쓰는 [휴직] 탭이 두 번째로
+       밀려 사용자가 매번 [오프보딩]에서 시작한다. 순서·라벨 둘 다 고정한다.
+  */
+  it("휴직이 먼저, 오프보딩이 뒤 — 두 탭만 있다", () => {
+    expect(HANDOVER_TYPE_TABS).toEqual([
+      { type: HANDOVER_TYPE.VACATION, label: "휴직" },
+      { type: HANDOVER_TYPE.OFFBOARDING, label: "오프보딩" },
+    ]);
   });
 });
